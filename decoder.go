@@ -1,8 +1,6 @@
 package csvutil
 
 import (
-	"errors"
-	"io"
 	"reflect"
 )
 
@@ -89,28 +87,8 @@ type ifaceDecodeFunc struct {
 // NewDecoder may return io.EOF if there is no data in r and no header was
 // provided by the caller.
 func NewDecoder(r Reader, header ...string) (dec *Decoder, err error) {
-	if len(header) == 0 {
-		header, err = r.Read()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	h := make([]string, len(header))
-	copy(h, header)
-	header = h
-
-	m := make(map[string]int, len(header))
-	for i, h := range header {
-		m[h] = i
-	}
-
-	return &Decoder{
-		r:      r,
-		header: header,
-		hmap:   m,
-		unused: make([]int, 0, len(header)),
-	}, nil
+	_ = "STUB: not implemented"
+	return nil, nil
 }
 
 // Decode reads the next string record or records from its input and stores it
@@ -185,77 +163,32 @@ func NewDecoder(r Reader, header ...string) (dec *Decoder, err error) {
 //
 // Fields with inline tags that have a non-empty prefix must not be cyclic
 // structures. Passing such values to Decode will result in an infinite loop.
-func (d *Decoder) Decode(v any) (err error) {
-	val := reflect.ValueOf(v)
-	if val.Kind() != reflect.Ptr || val.IsNil() {
-		return &InvalidDecodeError{Type: reflect.TypeOf(v)}
-	}
-
-	elem := indirect(val.Elem())
-	switch elem.Kind() {
-	case reflect.Struct:
-		return d.decodeStruct(elem)
-	case reflect.Slice:
-		return d.decodeSlice(elem)
-	case reflect.Array:
-		return d.decodeArray(elem)
-	case reflect.Interface, reflect.Invalid:
-		elem = walkValue(elem)
-		if elem.Kind() != reflect.Invalid {
-			return &InvalidDecodeError{Type: elem.Type()}
-		}
-		return &InvalidDecodeError{Type: val.Type()}
-	default:
-		return &InvalidDecodeError{Type: reflect.PtrTo(elem.Type())}
-	}
-}
+func (d *Decoder) Decode(v any) (err error) { _ = "STUB: not implemented"; return nil }
 
 // Record returns the most recently read record. The slice is valid until the
 // next call to Decode.
 func (d *Decoder) Record() []string {
-	return d.record
+	_ = "STUB: not implemented"
+
+	// Header returns the first line that came from the reader, or returns the
+	// defined header by the caller.
+	return nil
 }
 
-// Header returns the first line that came from the reader, or returns the
-// defined header by the caller.
-func (d *Decoder) Header() []string {
-	header := make([]string, len(d.header))
-	copy(header, d.header)
-	return header
-}
+func (d *Decoder) Header() []string { _ = "STUB: not implemented"; return nil }
 
 // NormalizeHeader applies f to every column in the header. It returns error
 // if calling f results in conflicting header columns.
 //
 // NormalizeHeader must be called before Decode.
 func (d *Decoder) NormalizeHeader(f func(string) string) error {
-	set := make(map[string]int, len(d.header))
-	for i, s := range d.header {
-		set[f(s)] = i
-	}
-
-	if len(set) != len(d.header) {
-		return errors.New("csvutil: normalize header results in conflicting columns")
-	}
-
-	for s, i := range set {
-		d.header[i] = s
-	}
-	d.hmap = set
+	_ = "STUB: not implemented"
 	return nil
 }
 
 // Unused returns a list of column indexes that were not used during decoding
 // due to lack of matching struct field.
-func (d *Decoder) Unused() []int {
-	if len(d.unused) == 0 {
-		return nil
-	}
-
-	indices := make([]int, len(d.unused))
-	copy(indices, d.unused)
-	return indices
-}
+func (d *Decoder) Unused() []int { _ = "STUB: not implemented"; return nil }
 
 // Register registers a custom decoding function for a concrete type or interface.
 // The argument f must be of type:
@@ -279,209 +212,38 @@ func (d *Decoder) Unused() []int {
 //
 // Deprecated: use UnmarshalFunc function with type parameter instead. The benefits
 // are type safety and much better performance.
-func (d *Decoder) Register(f any) {
-	v := reflect.ValueOf(f)
-	typ := v.Type()
-
-	if typ.Kind() != reflect.Func ||
-		typ.NumIn() != 2 || typ.NumOut() != 1 ||
-		typ.In(0) != _bytes || typ.Out(0) != _error {
-		panic("csvutil: func must be of type func([]byte, T) error")
-	}
-
-	argType := typ.In(1)
-
-	if argType.Kind() == reflect.Interface && argType.NumMethod() == 0 {
-		panic("csvutil: func argument type must not be an empty interface")
-	}
-
-	if d.funcMap == nil {
-		d.funcMap = make(map[reflect.Type]func([]byte, any) error)
-	}
-
-	if _, ok := d.funcMap[argType]; ok {
-		panic("csvutil: func " + typ.String() + " already registered")
-	}
-
-	isIface := argType.Kind() == reflect.Interface
-	isArgPtr := v.Type().In(1).Kind() == reflect.Ptr
-
-	fn := func(data []byte, in any) error {
-		dst := reflect.ValueOf(in)
-
-		if isIface && !dst.IsValid() {
-			return &UnmarshalTypeError{Value: string(data), Type: argType}
-		}
-
-		if !isIface && isArgPtr && dst.Kind() != reflect.Pointer {
-			dst = dst.Addr()
-		}
-
-		out := v.Call([]reflect.Value{
-			reflect.ValueOf(data),
-			dst,
-		})
-		err, _ := out[0].Interface().(error)
-		return err
-	}
-
-	d.funcMap[argType] = fn
-
-	if argType.Kind() == reflect.Interface {
-		d.ifaceFuncs = append(d.ifaceFuncs, ifaceDecodeFunc{
-			f:       fn,
-			argType: argType,
-		})
-	}
-}
+func (d *Decoder) Register(f any) { _ = "STUB: not implemented"; return }
 
 // WithUnmarshalers sets the provided Unmarshalers for the decoder.
 //
 // WithUnmarshalers is based on the encoding/json proposal:
 // https://github.com/golang/go/issues/5901.
-func (d *Decoder) WithUnmarshalers(u *Unmarshalers) {
-	d.funcMap = u.funcMap
-	d.ifaceFuncs = u.ifaceFuncs
-}
+func (d *Decoder) WithUnmarshalers(u *Unmarshalers) { _ = "STUB: not implemented"; return }
 
-func (d *Decoder) decodeSlice(slice reflect.Value) error {
-	typ := slice.Type().Elem()
-	if walkType(typ).Kind() != reflect.Struct {
-		return &InvalidDecodeError{Type: reflect.PtrTo(slice.Type())}
-	}
+func (d *Decoder) decodeSlice(slice reflect.Value) error { _ = "STUB: not implemented"; return nil }
 
-	slice.SetLen(0)
+// we want to ensure that we append this element to the slice even if it
+// was partially decoded due to error. This is how JSON pkg does it.
 
-	var c int
-	for ; ; c++ {
-		v := reflect.New(typ)
+func (d *Decoder) decodeArray(v reflect.Value) error { _ = "STUB: not implemented"; return nil }
 
-		err := d.decodeStruct(indirect(v))
-		if err == io.EOF {
-			if c == 0 {
-				return io.EOF
-			}
-			break
-		}
-
-		// we want to ensure that we append this element to the slice even if it
-		// was partially decoded due to error. This is how JSON pkg does it.
-		slice.Set(reflect.Append(slice, v.Elem()))
-		if err != nil {
-			return err
-		}
-	}
-
-	slice.Set(slice.Slice3(0, c, c))
-	return nil
-}
-
-func (d *Decoder) decodeArray(v reflect.Value) error {
-	if walkType(v.Type().Elem()).Kind() != reflect.Struct {
-		return &InvalidDecodeError{Type: reflect.PtrTo(v.Type())}
-	}
-
-	l := v.Len()
-
-	var i int
-	for ; i < l; i++ {
-		if err := d.decodeStruct(indirect(v.Index(i))); err == io.EOF {
-			if i == 0 {
-				return io.EOF
-			}
-			break
-		} else if err != nil {
-			return err
-		}
-	}
-
-	zero := reflect.Zero(v.Type().Elem())
-	for i := i; i < l; i++ {
-		v.Index(i).Set(zero)
-	}
-	return nil
-}
-
-func (d *Decoder) decodeStruct(v reflect.Value) (err error) {
-	d.record, err = d.r.Read()
-	if err != nil {
-		return err
-	}
-
-	if len(d.record) != len(d.header) {
-		if !d.AlignRecord {
-			return ErrFieldCount
-		}
-
-		if len(d.record) > len(d.header) {
-			d.record = d.record[:len(d.header)]
-		} else {
-			d.record = append(d.record, make([]string, len(d.header)-len(d.record))...)
-		}
-	}
-
-	return d.unmarshal(d.record, v)
-}
+func (d *Decoder) decodeStruct(v reflect.Value) (err error) { _ = "STUB: not implemented"; return nil }
 
 func (d *Decoder) unmarshal(record []string, v reflect.Value) error {
-	fields, err := d.fields(typeKey{d.tag(), v.Type()})
-	if err != nil {
-		return err
-	}
-
-fieldLoop:
-	for _, f := range fields {
-		isBlank := record[f.columnIndex] == ""
-		if f.tag.omitEmpty && isBlank {
-			continue
-		}
-
-		fv := v
-		for n, i := range f.index {
-			fv = fv.Field(i)
-			if fv.Kind() == reflect.Ptr {
-				if fv.IsNil() {
-					if isBlank && n == len(f.index)-1 { // ensure we are on the leaf.
-						continue fieldLoop
-					}
-					// this can happen if a field is an unexported embedded
-					// pointer type. In Go prior to 1.10 it was possible to
-					// set such value because of a bug in the reflect package
-					// https://github.com/golang/go/issues/21353
-					if !fv.CanSet() {
-						return errPtrUnexportedStruct(fv.Type())
-					}
-					fv.Set(reflect.New(fv.Type().Elem()))
-				}
-
-				if isBlank && n == len(f.index)-1 { // ensure we are on the leaf.
-					fv.Set(reflect.Zero(fv.Type()))
-					continue fieldLoop
-				}
-
-				if n != len(f.index)-1 {
-					fv = fv.Elem() // walk pointer until we are on the the leaf.
-				}
-			}
-		}
-
-		s := record[f.columnIndex]
-		if d.Map != nil && f.zero != nil {
-			zero := f.zero
-			if fv := walkPtr(fv); fv.Kind() == reflect.Interface && !fv.IsNil() {
-				if v := walkValue(fv); v.CanSet() {
-					zero = reflect.Zero(v.Type()).Interface()
-				}
-			}
-			s = d.Map(s, d.header[f.columnIndex], zero)
-		}
-
-		if err := f.decodeFunc(s, fv); err != nil {
-			return wrapDecodeError(d.r, d.header[f.columnIndex], f.columnIndex, err)
-		}
-	}
+	_ = "STUB: not implemented"
 	return nil
 }
+
+// ensure we are on the leaf.
+
+// this can happen if a field is an unexported embedded
+// pointer type. In Go prior to 1.10 it was possible to
+// set such value because of a bug in the reflect package
+// https://github.com/golang/go/issues/21353
+
+// ensure we are on the leaf.
+
+// walk pointer until we are on the the leaf.
 
 // wrapDecodeError provides the given error with more context such as:
 //   - column name (field)
@@ -493,117 +255,17 @@ fieldLoop:
 //
 // The caller should use errors.As in order to fetch the original error.
 func wrapDecodeError(r Reader, field string, fieldIndex int, err error) error {
-	fp, ok := r.(interface {
-		FieldPos(fieldIndex int) (line, column int)
-	})
-	if !ok {
-		return &DecodeError{
-			Field: field,
-			Err:   err,
-		}
-	}
-
-	l, c := fp.FieldPos(fieldIndex)
-
-	return &DecodeError{
-		Field:  field,
-		Line:   l,
-		Column: c,
-		Err:    err,
-	}
+	_ = "STUB: not implemented"
+	return nil
 }
 
-func (d *Decoder) fields(k typeKey) ([]decField, error) {
-	if k == d.typeKey {
-		return d.cache, nil
-	}
+func (d *Decoder) fields(k typeKey) ([]decField, error) { _ = "STUB: not implemented"; return nil, nil }
 
-	var (
-		fields      = cachedFields(k)
-		decFields   = make([]decField, 0, len(fields))
-		used        = make([]bool, len(d.header))
-		missingCols []string
-	)
-	for _, f := range fields {
-		i, ok := d.hmap[f.name]
-		if !ok {
-			if d.DisallowMissingColumns {
-				missingCols = append(missingCols, f.name)
-			}
-			continue
-		}
+// interface values are decoded to strings
 
-		fn, err := decodeFn(f.baseType, d.funcMap, d.ifaceFuncs)
-		if err != nil {
-			return nil, err
-		}
+func (d *Decoder) tag() string { _ = "STUB: not implemented"; return "" }
 
-		df := decField{
-			columnIndex: i,
-			field:       f,
-			decodeFunc:  fn,
-		}
-
-		if d.Map != nil {
-			switch f.typ.Kind() {
-			case reflect.Interface:
-				df.zero = "" // interface values are decoded to strings
-			default:
-				df.zero = reflect.Zero(walkType(f.typ)).Interface()
-			}
-		}
-
-		decFields = append(decFields, df)
-		used[i] = true
-	}
-
-	if len(missingCols) > 0 {
-		return nil, &MissingColumnsError{
-			Columns: missingCols,
-		}
-	}
-
-	d.unused = d.unused[:0]
-	for i, b := range used {
-		if !b {
-			d.unused = append(d.unused, i)
-		}
-	}
-
-	d.cache, d.typeKey = decFields, k
-	return d.cache, nil
-}
-
-func (d *Decoder) tag() string {
-	if d.Tag == "" {
-		return defaultTag
-	}
-	return d.Tag
-}
-
-func indirect(v reflect.Value) reflect.Value {
-	for {
-		switch v.Kind() {
-		case reflect.Interface:
-			if v.IsNil() {
-				return v
-			}
-			e := v.Elem()
-			if e.Kind() == reflect.Ptr && !e.IsNil() {
-				v = e
-				continue
-			}
-			return v
-		case reflect.Ptr:
-			if v.IsNil() {
-				v.Set(reflect.New(v.Type().Elem()))
-			}
-			v = v.Elem()
-		default:
-			return v
-		}
-	}
-}
+func indirect(v reflect.Value) reflect.Value { _ = "STUB: not implemented"; return *new(reflect.Value) }
 
 // Unmarshalers stores custom unmarshal functions. Unmarshalers is immutable.
 //
@@ -617,23 +279,7 @@ type Unmarshalers struct {
 // NewUnmarshalers merges the provided Unmarshalers into one and returns it.
 // If Unmarshalers contain duplicate function signatures, the one that was
 // provided first wins.
-func NewUnmarshalers(us ...*Unmarshalers) *Unmarshalers {
-	out := &Unmarshalers{
-		funcMap: make(map[reflect.Type]func([]byte, any) error),
-	}
-
-	for _, u := range us {
-		for k, v := range u.funcMap {
-			if _, ok := out.funcMap[k]; ok {
-				continue
-			}
-			out.funcMap[k] = v
-		}
-		out.ifaceFuncs = append(out.ifaceFuncs, u.ifaceFuncs...)
-	}
-
-	return out
-}
+func NewUnmarshalers(us ...*Unmarshalers) *Unmarshalers { _ = "STUB: not implemented"; return nil }
 
 // UnmarshalFunc stores the provided function in Unmarshaler and returns it.
 //
@@ -646,38 +292,6 @@ func NewUnmarshalers(us ...*Unmarshalers) *Unmarshalers {
 //
 // UnmarshalFunc panics if T is an empty interface.
 func UnmarshalFunc[T any](f func([]byte, T) error) *Unmarshalers {
-	var (
-		funcMap    = make(map[reflect.Type]func([]byte, any) error)
-		ifaceFuncs []ifaceDecodeFunc
-		argType    = reflect.TypeOf(f).In(1)
-		isIface    = argType.Kind() == reflect.Interface
-	)
-
-	fn := func(data []byte, v any) error {
-		if !isIface {
-			return f(data, v.(T))
-		}
-		if _, ok := v.(T); !ok {
-			return &UnmarshalTypeError{Value: string(data), Type: argType}
-		}
-		return f(data, v.(T))
-	}
-
-	funcMap[argType] = fn
-
-	if argType.Kind() == reflect.Interface {
-		if argType.NumMethod() == 0 {
-			panic("csvutil: func argument type must not be an empty interface")
-		}
-
-		ifaceFuncs = append(ifaceFuncs, ifaceDecodeFunc{
-			f:       fn,
-			argType: argType,
-		})
-	}
-
-	return &Unmarshalers{
-		funcMap:    funcMap,
-		ifaceFuncs: ifaceFuncs,
-	}
+	_ = "STUB: not implemented"
+	return nil
 }

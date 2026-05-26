@@ -1,11 +1,8 @@
 package csvutil
 
 import (
-	"bytes"
 	"errors"
-	"fmt"
 	"reflect"
-	"strconv"
 )
 
 // ErrFieldCount is returned when header's length doesn't match the length of
@@ -21,9 +18,7 @@ type UnmarshalTypeError struct {
 	Type  reflect.Type // type of Go value it could not be assigned to
 }
 
-func (e *UnmarshalTypeError) Error() string {
-	return "csvutil: cannot unmarshal " + strconv.Quote(e.Value) + " into Go value of type " + e.Type.String()
-}
+func (e *UnmarshalTypeError) Error() string { _ = "STUB: not implemented"; return "" }
 
 // An UnsupportedTypeError is returned when attempting to encode or decode
 // a value of an unsupported type.
@@ -31,12 +26,7 @@ type UnsupportedTypeError struct {
 	Type reflect.Type
 }
 
-func (e *UnsupportedTypeError) Error() string {
-	if e.Type == nil {
-		return "csvutil: unsupported type: nil"
-	}
-	return "csvutil: unsupported type: " + e.Type.String()
-}
+func (e *UnsupportedTypeError) Error() string { _ = "STUB: not implemented"; return "" }
 
 // An InvalidDecodeError describes an invalid argument passed to Decode.
 // (The argument to Decode must be a non-nil struct pointer)
@@ -44,28 +34,7 @@ type InvalidDecodeError struct {
 	Type reflect.Type
 }
 
-func (e *InvalidDecodeError) Error() string {
-	if e.Type == nil {
-		return "csvutil: Decode(nil)"
-	}
-
-	if e.Type.Kind() != reflect.Ptr {
-		return "csvutil: Decode(non-pointer " + e.Type.String() + ")"
-	}
-
-	typ := walkType(e.Type)
-	switch typ.Kind() {
-	case reflect.Struct:
-	case reflect.Slice, reflect.Array:
-		if typ.Elem().Kind() != reflect.Struct {
-			return "csvutil: Decode(invalid type " + e.Type.String() + ")"
-		}
-	default:
-		return "csvutil: Decode(invalid type " + e.Type.String() + ")"
-	}
-
-	return "csvutil: Decode(nil " + e.Type.String() + ")"
-}
+func (e *InvalidDecodeError) Error() string { _ = "STUB: not implemented"; return "" }
 
 // An InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
 // (The argument to Unmarshal must be a non-nil slice of structs pointer)
@@ -73,50 +42,21 @@ type InvalidUnmarshalError struct {
 	Type reflect.Type
 }
 
-func (e *InvalidUnmarshalError) Error() string {
-	if e.Type == nil {
-		return "csvutil: Unmarshal(nil)"
-	}
-
-	if e.Type.Kind() != reflect.Ptr {
-		return "csvutil: Unmarshal(non-pointer " + e.Type.String() + ")"
-	}
-
-	return "csvutil: Unmarshal(invalid type " + e.Type.String() + ")"
-}
+func (e *InvalidUnmarshalError) Error() string { _ = "STUB: not implemented"; return "" }
 
 // InvalidEncodeError is returned by Encode when the provided value was invalid.
 type InvalidEncodeError struct {
 	Type reflect.Type
 }
 
-func (e *InvalidEncodeError) Error() string {
-	if e.Type == nil {
-		return "csvutil: Encode(nil)"
-	}
-	return "csvutil: Encode(" + e.Type.String() + ")"
-}
+func (e *InvalidEncodeError) Error() string { _ = "STUB: not implemented"; return "" }
 
 // InvalidMarshalError is returned by Marshal when the provided value was invalid.
 type InvalidMarshalError struct {
 	Type reflect.Type
 }
 
-func (e *InvalidMarshalError) Error() string {
-	if e.Type == nil {
-		return "csvutil: Marshal(nil)"
-	}
-
-	if walkType(e.Type).Kind() == reflect.Slice {
-		return "csvutil: Marshal(non struct slice " + e.Type.String() + ")"
-	}
-
-	if walkType(e.Type).Kind() == reflect.Array {
-		return "csvutil: Marshal(non struct array " + e.Type.String() + ")"
-	}
-
-	return "csvutil: Marshal(invalid type " + e.Type.String() + ")"
-}
+func (e *InvalidMarshalError) Error() string { _ = "STUB: not implemented"; return "" }
 
 // MarshalerError is returned by Encoder when MarshalCSV or MarshalText returned
 // an error.
@@ -126,18 +66,12 @@ type MarshalerError struct {
 	Err           error
 }
 
-func (e *MarshalerError) Error() string {
-	return "csvutil: error calling " + e.MarshalerType + " for type " + e.Type.String() + ": " + e.Err.Error()
-}
+func (e *MarshalerError) Error() string { _ = "STUB: not implemented"; return "" }
 
 // Unwrap implements Unwrap interface for errors package in Go1.13+.
-func (e *MarshalerError) Unwrap() error {
-	return e.Err
-}
+func (e *MarshalerError) Unwrap() error { _ = "STUB: not implemented"; return nil }
 
-func errPtrUnexportedStruct(typ reflect.Type) error {
-	return fmt.Errorf("csvutil: cannot decode into a pointer to unexported struct: %s", typ)
-}
+func errPtrUnexportedStruct(typ reflect.Type) error { _ = "STUB: not implemented"; return nil }
 
 // MissingColumnsError is returned by Decoder only when DisallowMissingColumns
 // option was set to true. It contains a list of all missing columns.
@@ -145,17 +79,7 @@ type MissingColumnsError struct {
 	Columns []string
 }
 
-func (e *MissingColumnsError) Error() string {
-	var b bytes.Buffer
-	b.WriteString("csvutil: missing columns: ")
-	for i, c := range e.Columns {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		fmt.Fprintf(&b, "%q", c)
-	}
-	return b.String()
-}
+func (e *MissingColumnsError) Error() string { _ = "STUB: not implemented"; return "" }
 
 // DecodeError provides context to decoding errors if available.
 //
@@ -182,14 +106,8 @@ type DecodeError struct {
 	Err error
 }
 
-func (e *DecodeError) Error() string {
-	if e.Line > 0 && e.Column > 0 {
-		// Lines and Columns are 1-indexed so this check is fine.
-		return fmt.Sprintf("%s: field %q line %d column %d", e.Err, e.Field, e.Line, e.Column)
-	}
-	return fmt.Sprintf("%s: field %q", e.Err, e.Field)
-}
+func (e *DecodeError) Error() string { _ = "STUB: not implemented"; return "" }
 
-func (e *DecodeError) Unwrap() error {
-	return e.Err
-}
+// Lines and Columns are 1-indexed so this check is fine.
+
+func (e *DecodeError) Unwrap() error { _ = "STUB: not implemented"; return nil }

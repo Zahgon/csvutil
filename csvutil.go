@@ -1,7 +1,6 @@
 package csvutil
 
 import (
-	"bytes"
 	"encoding/csv"
 	"io"
 	"reflect"
@@ -27,59 +26,12 @@ var (
 //
 // In case of success the provided slice will be reinitialized and its content
 // fully replaced with decoded data.
-func Unmarshal(data []byte, v any) error {
-	val := reflect.ValueOf(v)
+func Unmarshal(data []byte, v any) error { _ = "STUB: not implemented"; return nil }
 
-	if val.Kind() != reflect.Ptr || val.IsNil() {
-		return &InvalidUnmarshalError{Type: reflect.TypeOf(v)}
-	}
+// for the array just call decodeArray directly; for slice values call the
+// optimized code for better performance.
 
-	switch val.Type().Elem().Kind() {
-	case reflect.Slice, reflect.Array:
-	default:
-		return &InvalidUnmarshalError{Type: val.Type()}
-	}
-
-	typ := val.Type().Elem()
-
-	if walkType(typ.Elem()).Kind() != reflect.Struct {
-		return &InvalidUnmarshalError{Type: val.Type()}
-	}
-
-	dec, err := NewDecoder(newCSVReader(bytes.NewReader(data)))
-	if err == io.EOF {
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// for the array just call decodeArray directly; for slice values call the
-	// optimized code for better performance.
-
-	if typ.Kind() == reflect.Array {
-		return dec.decodeArray(val.Elem())
-	}
-
-	c := countRecords(data)
-	slice := reflect.MakeSlice(typ, c, c)
-
-	var i int
-	for ; ; i++ {
-		// just in case countRecords counts it wrong.
-		if i >= c && i >= slice.Len() {
-			slice = reflect.Append(slice, reflect.New(typ.Elem()).Elem())
-		}
-
-		if err := dec.Decode(slice.Index(i).Addr().Interface()); err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		}
-	}
-
-	val.Elem().Set(slice.Slice3(0, i, i))
-	return nil
-}
+// just in case countRecords counts it wrong.
 
 // Marshal returns the CSV encoding of slice or array v. If v is not a slice or
 // elements are not structs then Marshal returns InvalidMarshalError.
@@ -90,69 +42,9 @@ func Unmarshal(data []byte, v any) error {
 // Marshal will always encode the CSV header even for the empty slice.
 //
 // For the exact encoding rules look at Encoder.Encode method.
-func Marshal(v any) ([]byte, error) {
-	val := walkValue(reflect.ValueOf(v))
+func Marshal(v any) ([]byte, error) { _ = "STUB: not implemented"; return nil, nil }
 
-	if !val.IsValid() {
-		return nil, &InvalidMarshalError{}
-	}
-
-	switch val.Kind() {
-	case reflect.Array, reflect.Slice:
-	default:
-		return nil, &InvalidMarshalError{Type: reflect.ValueOf(v).Type()}
-	}
-
-	typ := walkType(val.Type().Elem())
-	if typ.Kind() != reflect.Struct {
-		return nil, &InvalidMarshalError{Type: reflect.ValueOf(v).Type()}
-	}
-
-	var buf bytes.Buffer
-	w := csv.NewWriter(&buf)
-	enc := NewEncoder(w)
-
-	if err := enc.encodeHeader(typ); err != nil {
-		return nil, err
-	}
-
-	if err := enc.encodeArray(val); err != nil {
-		return nil, err
-	}
-
-	w.Flush()
-	if err := w.Error(); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func countRecords(s []byte) (n int) {
-	var prev byte
-	inQuote := false
-	for {
-		if len(s) == 0 && prev != '"' {
-			return n
-		}
-
-		i := bytes.IndexAny(s, "\n\"")
-		if i == -1 {
-			return n + 1
-		}
-
-		switch s[i] {
-		case '\n':
-			if !inQuote && (i > 0 || prev == '"') {
-				n++
-			}
-		case '"':
-			inQuote = !inQuote
-		}
-
-		prev = s[i]
-		s = s[i+1:]
-	}
-}
+func countRecords(s []byte) (n int) { _ = "STUB: not implemented"; return 0 }
 
 // Header scans the provided struct type, struct slice or struct array and generates a CSV header for it.
 //
@@ -177,58 +69,11 @@ func countRecords(s []byte) (n int) {
 //
 // Header will return UnsupportedTypeError if the provided value is nil, is
 // not a struct, a struct slice or a struct array.
-func Header(v any, tag string) ([]string, error) {
-	typ, err := valueType(v)
-	if err != nil {
-		return nil, err
-	}
-
-	if tag == "" {
-		tag = defaultTag
-	}
-
-	fields := cachedFields(typeKey{tag, typ})
-	h := make([]string, len(fields))
-	for i, f := range fields {
-		h[i] = f.name
-	}
-	return h, nil
-}
+func Header(v any, tag string) ([]string, error) { _ = "STUB: not implemented"; return nil, nil }
 
 func valueType(v any) (reflect.Type, error) {
-	val := reflect.ValueOf(v)
-	if !val.IsValid() {
-		return nil, &UnsupportedTypeError{}
-	}
-
-loop:
-	for {
-		switch val.Kind() {
-		case reflect.Ptr, reflect.Interface:
-			el := val.Elem()
-			if !el.IsValid() {
-				break loop
-			}
-			val = el
-		default:
-			break loop
-		}
-	}
-
-	typ := walkType(val.Type())
-	switch typ.Kind() {
-	case reflect.Struct:
-		return typ, nil
-	case reflect.Slice, reflect.Array:
-		if eTyp := walkType(typ.Elem()); eTyp.Kind() == reflect.Struct {
-			return eTyp, nil
-		}
-	}
-	return nil, &UnsupportedTypeError{Type: typ}
+	_ = "STUB: not implemented"
+	return *new(reflect.Type), nil
 }
 
-func newCSVReader(r io.Reader) *csv.Reader {
-	rr := csv.NewReader(r)
-	rr.ReuseRecord = true
-	return rr
-}
+func newCSVReader(r io.Reader) *csv.Reader { _ = "STUB: not implemented"; return nil }
